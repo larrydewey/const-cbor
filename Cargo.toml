@@ -1,0 +1,14 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Larry Dewey
+
+[package]
+name = "const-cbor"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["encode", "decode"]
+encode = []
+decode = []
+
+[dependencies]
