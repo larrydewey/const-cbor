@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Larry Dewey
+
+[package]
+name = "const-cbor"
+version = "0.1.0"
+authors = [ "Larry Dewey <larry.dewey@amd.com>" ]
+edition = "2024"
+rust-version = "1.86.0"
+description = "A no_std compatible Rust library for Concise Binary Object Representation (CBOR) encoding and decoding that supports compile-time operations via const fn."
+repository = "https://github.com/larrydewey/const-cbor"
+homepage = "https://github.com/larrydewey/const-cbor"
+license = "MIT"
+keywords = [ "cbor", "const", "embedded", "encoding", "encode" ]
+readme = "README.md"
+
+[dependencies]
