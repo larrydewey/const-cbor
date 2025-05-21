@@ -3,7 +3,7 @@
 
 [package]
 name = "const-cbor"
-version = "0.1.0"
+version = "0.2.0"
 authors = [ "Larry Dewey <larry.dewey@amd.com>" ]
 edition = "2024"
 rust-version = "1.86.0"

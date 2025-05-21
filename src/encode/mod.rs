@@ -25,9 +25,10 @@
 //! assert_eq!(buf[1], 42);
 //! ```
 
-use crate::{Value, result::Result};
+use crate::{Value, encode::major_type::MajorType, result::Result};
 
 mod cursor;
+pub mod major_type;
 
 use cursor::Cursor;
 
@@ -47,38 +48,6 @@ pub trait Encode<'a> {
     /// * `Ok(usize)` - The number of bytes written to the buffer.
     /// * `Err(Error)` - If an error occurred during encoding.
     fn as_cbor(&'a self, buf: &'a mut [u8]) -> Result<usize>;
-}
-
-/// CBOR major types as defined in RFC 7049.
-///
-/// The major type is encoded in the high-order 3 bits of the first byte
-/// of a data item, and indicates the basic type of the data item.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[repr(u8)]
-pub enum MajorType {
-    /// Major type 0: Unsigned integer (0..23, U8..U64)
-    Unsigned = 0,
-
-    /// Major type 1: Negative integer (-1..-18446744073709551616)
-    Negative = 1,
-
-    /// Major type 2: Byte string (0..2^64-1 bytes)
-    Bytes = 2,
-
-    /// Major type 3: Text string (0..2^64-1 bytes)
-    Text = 3,
-
-    /// Major type 4: Array of data items
-    Array = 4,
-
-    /// Major type 5: Map of pairs of data items
-    Map = 5,
-
-    /// Major type 6: Tagged data items
-    Tag = 6,
-
-    /// Major type 7: Simple values, floating point, and special values
-    Simple = 7,
 }
 
 /// Encodes a CBOR header byte and additional bytes for the given major type and value.
@@ -172,23 +141,23 @@ const fn encode_header(major: u8, value: u64) -> (u8, [u8; 8], usize) {
 pub const fn encoded_size(value: &Value) -> usize {
     match value {
         Value::Unsigned(n) => {
-            let (_, _, extra) = encode_header(MajorType::Unsigned as u8, *n);
+            let (_, _, extra) = encode_header(major_type::UNSIGNED, *n);
             1 + extra
         }
         Value::Negative(n) => {
-            let (_, _, extra) = encode_header(MajorType::Negative as u8, *n);
+            let (_, _, extra) = encode_header(major_type::NEGATIVE, *n);
             1 + extra
         }
         Value::Bytes(b) => {
-            let (_, _, extra) = encode_header(MajorType::Bytes as u8, b.len() as u64);
+            let (_, _, extra) = encode_header(major_type::BYTES, b.len() as u64);
             1 + extra + b.len()
         }
         Value::Text(t) => {
-            let (_, _, extra) = encode_header(MajorType::Text as u8, t.len() as u64);
+            let (_, _, extra) = encode_header(major_type::TEXT, t.len() as u64);
             1 + extra + t.len()
         }
         Value::Array(items) => {
-            let (_, _, extra) = encode_header(MajorType::Array as u8, items.len() as u64);
+            let (_, _, extra) = encode_header(major_type::ARRAY, items.len() as u64);
             let mut size = 1 + extra;
             let mut i = 0;
 
@@ -199,7 +168,7 @@ pub const fn encoded_size(value: &Value) -> usize {
             size
         }
         Value::Map(pairs) => {
-            let (_, _, extra) = encode_header(MajorType::Map as u8, pairs.len() as u64);
+            let (_, _, extra) = encode_header(major_type::MAP, pairs.len() as u64);
             let mut size = 1 + extra;
             let mut i = 0;
 
@@ -210,14 +179,14 @@ pub const fn encoded_size(value: &Value) -> usize {
             size
         }
         Value::Tag(tag, item) => {
-            let (_, _, extra) = encode_header(MajorType::Tag as u8, *tag);
+            let (_, _, extra) = encode_header(major_type::TAG, *tag);
             1 + extra + encoded_size(item)
         }
         Value::Simple(s) => {
-            let (_, _, extra) = encode_header(MajorType::Simple as u8, *s as u64);
+            let (_, _, extra) = encode_header(major_type::SIMPLE, *s as u64);
             1 + extra
         }
-        Value::Float(_) => 9,
+        Value::Float(_) => major_type::FLOAT as usize,
     }
 }
 
@@ -255,6 +224,19 @@ pub fn encode(value: &Value, buf: &mut [u8]) -> Result<usize> {
     Ok(cursor.pos)
 }
 
+#[inline]
+fn write_header_with_extras(cursor: &mut Cursor, major_type: MajorType, value: u64) -> Result<()> {
+    let (header, extra, len) = encode_header(major_type, value);
+    cursor.write_byte(header)?;
+    let mut i = 0;
+    while i < len {
+        cursor.write_byte(extra[i])?;
+        i += 1;
+    }
+
+    Ok(())
+}
+
 /// Internal function that encodes a CBOR value using a cursor.
 ///
 /// This function performs the actual encoding by writing bytes to the cursor based on
@@ -273,78 +255,42 @@ pub fn encode(value: &Value, buf: &mut [u8]) -> Result<usize> {
 #[inline]
 fn encode_value(value: &Value, cursor: &mut Cursor) -> Result<()> {
     match value {
-        Value::Unsigned(n) => {
-            let (header, extra, len) = encode_header(MajorType::Unsigned as u8, *n);
-            cursor.write_byte(header)?;
-            for i in 0..len {
-                cursor.write_byte(extra[i])?;
-            }
-        }
-        Value::Negative(n) => {
-            let (header, extra, len) = encode_header(MajorType::Negative as u8, *n);
-            cursor.write_byte(header)?;
-            for i in 0..len {
-                cursor.write_byte(extra[i])?;
-            }
-        }
+        Value::Unsigned(n) => write_header_with_extras(cursor, major_type::UNSIGNED, *n)?,
+        Value::Negative(n) => write_header_with_extras(cursor, major_type::NEGATIVE, *n)?,
         Value::Bytes(bytes) => {
-            let (header, extra, len) = encode_header(MajorType::Bytes as u8, bytes.len() as u64);
-            cursor.write_byte(header)?;
-            for i in 0..len {
-                cursor.write_byte(extra[i])?;
-            }
+            write_header_with_extras(cursor, major_type::BYTES, bytes.len() as u64)?;
             for &byte in *bytes {
                 cursor.write_byte(byte)?;
             }
         }
         Value::Text(text) => {
-            let (header, extra, len) = encode_header(MajorType::Text as u8, text.len() as u64);
-            cursor.write_byte(header)?;
-            for i in 0..len {
-                cursor.write_byte(extra[i])?;
-            }
+            write_header_with_extras(cursor, major_type::TEXT, text.len() as u64)?;
             for &byte in text.as_bytes() {
                 cursor.write_byte(byte)?;
             }
         }
         Value::Array(items) => {
-            let (header, extra, len) = encode_header(MajorType::Array as u8, items.len() as u64);
-            cursor.write_byte(header)?;
-            for i in 0..len {
-                cursor.write_byte(extra[i])?;
-            }
+            write_header_with_extras(cursor, major_type::ARRAY, items.len() as u64)?;
             for value in *items {
                 encode_value(value, cursor)?;
             }
         }
         Value::Map(pairs) => {
-            let (header, extra, len) = encode_header(MajorType::Map as u8, pairs.len() as u64);
-            cursor.write_byte(header)?;
-            for i in 0..len {
-                cursor.write_byte(extra[i])?;
-            }
+            write_header_with_extras(cursor, major_type::MAP, pairs.len() as u64)?;
             for (key, value) in *pairs {
                 encode_value(key, cursor)?;
                 encode_value(value, cursor)?;
             }
         }
         Value::Tag(tag, item) => {
-            let (header, extra, len) = encode_header(MajorType::Tag as u8, *tag);
-            cursor.write_byte(header)?;
-            for i in 0..len {
-                cursor.write_byte(extra[i])?;
-            }
+            write_header_with_extras(cursor, major_type::TAG, *tag)?;
             encode_value(item, cursor)?;
         }
         Value::Simple(s) => {
-            let (header, extra, len) = encode_header(MajorType::Simple as u8, *s as u64);
-            cursor.write_byte(header)?;
-            for i in 0..len {
-                cursor.write_byte(extra[i])?;
-            }
+            write_header_with_extras(cursor, major_type::SIMPLE, *s as u64)?;
         }
         Value::Float(f) => {
-            cursor.write_byte((MajorType::Simple as u8) << 5 | 27)?;
+            cursor.write_byte(major_type::SIMPLE << 5 | 27)?;
             let bytes = f.to_bits().to_be_bytes();
             for byte in bytes {
                 cursor.write_byte(byte)?;
@@ -433,7 +379,7 @@ mod tests {
             (Value::text("favorite_colors"), Value::array(&colors)),
         ];
 
-        let map = Value::map(&items);
+        let map = Value::map(items.as_slice());
 
         let mut buf = [0u8; 75];
 

@@ -12,6 +12,9 @@
 //! The `Value` enum in this module allows for building and manipulating CBOR data
 //! structures in a memory-efficient and type-safe way.
 
+type Array<'a> = &'a [Value<'a>];
+type Map<'a> = &'a [(Value<'a>, Value<'a>)];
+
 /// Represents a CBOR value that can be encoded or decoded.
 ///
 /// The lifetime parameter `'a` allows the Value to reference data that it does not own,
@@ -229,7 +232,7 @@ impl<'a> Value<'a> {
     /// let array = Value::array(&items);
     /// ```
     #[inline]
-    pub const fn array(value: &'a [Value<'a>]) -> Self {
+    pub const fn array(value: Array<'a>) -> Self {
         Self::Array(value)
     }
 
@@ -249,7 +252,7 @@ impl<'a> Value<'a> {
     /// let map = Value::map(&pairs);
     /// ```
     #[inline]
-    pub const fn map(value: &'a [(Value<'a>, Value<'a>)]) -> Self {
+    pub const fn map(value: Map<'a>) -> Self {
         Self::Map(value)
     }
 
@@ -270,8 +273,8 @@ impl<'a> Value<'a> {
     /// let tagged = Value::tag(0, &datetime);
     /// ```
     #[inline]
-    pub const fn tag(value: u64, inner: &'a Value<'a>) -> Self {
-        Self::Tag(value, inner)
+    pub const fn tag(tag: u64, item: &'a Value<'a>) -> Self {
+        Self::Tag(tag, item)
     }
 
     /// Creates a CBOR floating point value (major type 7, additional info 27 for double precision).

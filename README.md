@@ -4,7 +4,7 @@
 [![Rust Version](https://img.shields.io/badge/rust-2024-blue.svg)](https://www.rust-lang.org/)
 [![No Std](https://img.shields.io/badge/no__std-compatible-green.svg)](https://doc.rust-lang.org/reference/names/preludes.html#the-no_std-attribute)
 
-A `no_std` compatible Rust library for Concise Binary Object Representation (CBOR) encoding and decoding that supports compile-time operations via `const fn`. 
+A `no_std` compatible Rust library for Concise Binary Object Representation (CBOR) encoding and decoding that supports compile-time operations via `const fn`.
 
 ## Features
 
@@ -32,7 +32,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-const-cbor = "0.1.0"
+const-cbor = "0.2.0"
 ```
 
 ### Basic Example

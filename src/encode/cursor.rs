@@ -42,7 +42,7 @@ impl<'a> Cursor<'a> {
     /// * `Ok(())` if the byte was successfully written.
     /// * `Err(Error::BufferOverflow)` if the buffer is full.
     #[inline]
-    pub(crate) fn write_byte(&mut self, byte: u8) -> Result<()> {
+    pub(crate) const fn write_byte(&mut self, byte: u8) -> Result<()> {
         if self.pos < self.data.len() {
             self.data[self.pos] = byte;
             self.pos += 1;
