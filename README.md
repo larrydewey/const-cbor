@@ -63,7 +63,7 @@ assert_eq!(&NEG_TEN.0[..NEG_TEN.1], &[0x29]);
 
 ```toml
 [dependencies]
-const-cbor = "0.1"
+const-cbor = "0.2"
 ```
 
 ### Encode
@@ -109,7 +109,7 @@ Nothing beyond the core is compiled unless you ask:
 
 ```toml
 [dependencies]
-const-cbor = { version = "0.1", features = ["float", "indefinite"] }
+const-cbor = { version = "0.2", features = ["float", "indefinite"] }
 ```
 
 | Feature | Capability | RFC section |

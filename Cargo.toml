@@ -1,6 +1,6 @@
 [package]
 name = "const-cbor"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 rust-version = "1.98"
 description = "A const-first, no_std, allocation-free CBOR (RFC 8949) codec with no dependencies and no unsafe."

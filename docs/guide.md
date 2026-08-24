@@ -9,8 +9,8 @@ in `examples/`.
 
 ```toml
 [dependencies]
-const-cbor = "0.1"
-const-cbor = { version = "0.1", features = ["float"] }  # with floats
+const-cbor = "0.2"
+const-cbor = { version = "0.2", features = ["float"] }  # with floats
 ```
 
 No features are enabled by default; the core works without them.
