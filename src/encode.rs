@@ -274,10 +274,10 @@ mod float_impls {
 
         /// Encodes an `f64` using the shortest exact representation.
         pub fn f64(&mut self, v: f64) -> Result<&mut Self, Error> {
-            if let Some(half) = f16_bits_of(v as f32) {
-                if f64::from(f32_of_f16_bits(half)) == v {
-                    return self.float_exact(u64::from(half), 25);
-                }
+            if let Some(half) = f16_bits_of(v as f32)
+                && f64::from(f32_of_f16_bits(half)) == v
+            {
+                return self.float_exact(u64::from(half), 25);
             }
             if !v.is_nan() && f64::from(v as f32) == v {
                 return self.float_exact(u64::from((v as f32).to_bits()), 26);

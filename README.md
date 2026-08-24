@@ -12,14 +12,22 @@ CBOR directly between Rust values and byte buffers — no value tree, no
 heap, no `unsafe`, no traits, no dependencies.
 
 ```
-flash on Cortex-M3 (thumbv7m, opt-z, LTO), linked binary sections:
-  default build, exercised paths ............ ~1.4 KB
-  + indefinite/raw/stream/canonical ......... ~4.4 KB
-  + diagnostic (uses core::fmt) ............. ~6.4 KB
-  + float decimal rendering (core fmt) ...... ~19 KB
+flash on Cortex-M3 (thumbv7m-none-eabi, opt-z, LTO), linked binary
+sections (.text + .rodata + unwind), inputs black_boxed so nothing is
+const-folded away:
 
-Features you do not enable cost nothing; paths you do not call are
-eliminated by LTO.
+  core only ................................ ~2.7 KB
+  + float (encode + decode exercised) ...... ~3.5 KB
+  + indefinite ............................. ~3.8 KB
+  + diagnostic ............................. ~7.0 KB
+  + diagnostic + float decimal text ........ ~20 KB
+  everything enabled and used .............. ~21.9 KB
+
+Features you do not enable — or call — cost nothing.
+
+The same probe builds and **runs on x86_64** (`cargo run --release`),
+where the linked `const_cbor` symbols can be inspected directly with
+`nm target/release/cbor-size | grep const_cbor`.
 ```
 
 ## Why another CBOR crate?

@@ -141,7 +141,20 @@ overflow (fixed 16-level indefinite nesting) and `MapBuilder` capacity.
 
 ## Size and Performance Profile
 
-Measured on Cortex-M3 (`thumbv7m-none-eabi`, opt-z, LTO, abort-on-panic):
-~1.2 KB of `.text` for the full feature set. All operations are branchy
-byte loops over slices; there are no allocations, locks, or dynamic
-dispatch anywhere on any path.
+Measured on Cortex-M3 (`thumbv7m-none-eabi`, opt-z, LTO, abort-on-panic)
+with `black_box`ed inputs so nothing is const-folded away; see
+`size-probe/` for the reproducible methodology. Linked `.text` sizes:
+
+| Configuration | `.text` |
+|---|---|
+| core only | ~2.4 KB |
+| + float | ~3.2 KB |
+| + indefinite | ~3.5 KB |
+| + diagnostic | ~6.6 KB |
+| + diagnostic + float decimal text | ~18.4 KB |
+| everything enabled and used | ~19.9 KB |
+
+All operations are branchy byte loops over slices; there are no
+allocations, locks, or dynamic dispatch anywhere on any path. The same
+probe runs natively on x86_64, where linked symbols can be inspected with
+`nm` to confirm which code paths are actually retained.

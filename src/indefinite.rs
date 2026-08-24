@@ -243,8 +243,10 @@ impl<'a, T> StringChunks<'a, T> {
         }
         match self.rest.first() {
             Some(&b) if head::is_break(b) => {
+                // Keep `rest` pointing just past the break so
+                // [`Decoder::sync_chunks`] can recover the position.
+                self.rest = &self.rest[1..];
                 self.state = State::Broken;
-                self.rest = &[];
                 None
             }
             None => {

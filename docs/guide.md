@@ -187,6 +187,30 @@ Full behavioral rules: [`behavior.md`](behavior.md).
 
 ---
 
+## Human-readable output (`diagnostic` feature)
+
+Render any CBOR bytes into RFC 8949 §8 diagnostic notation:
+
+```rust,ignore
+use const_cbor::diagnostic;
+
+let mut text = [0u8; 256];
+let pretty = diagnostic::render(cbor_bytes, &mut text)?;
+// e.g. "{ "a": 1, "b": [_ 2, 3] }"
+```
+
+Or forward into any `core::fmt::Write` target (log macros, format
+machinery) without an intermediate copy:
+
+```rust,ignore
+diagnostic::write_to(cbor_bytes, &mut logger)?;
+```
+
+Style: single line, `, ` between siblings, `: ` in maps, `h'hex'` for
+bytes, `tag(item)`, `_` markers for indefinite items. Floats render as
+shortest-roundtrip decimals with the `float` feature (otherwise as
+`float(0x…)` bit patterns).
+
 ## Embedded / no_std notes
 
 * The crate is `#![no_std]`; nothing ever allocates or blocks.

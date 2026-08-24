@@ -1,0 +1,27 @@
+[package]
+name = "cbor-size"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[features]
+default = ["all"]
+float = ["const-cbor/float"]
+indefinite = ["const-cbor/indefinite"]
+raw = ["const-cbor/raw"]
+stream = ["const-cbor/stream"]
+canonical = ["const-cbor/canonical"]
+diagnostic = ["const-cbor/diagnostic"]
+all = ["float", "indefinite", "raw", "stream", "canonical", "diagnostic"]
+
+[dependencies]
+const-cbor = { path = ".." }
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+
+[lints.rust]
+unexpected_cfgs = { level = "allow" }
