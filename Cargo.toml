@@ -1,0 +1,53 @@
+[package]
+name = "const-cbor"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "A const-first, no_std, allocation-free CBOR (RFC 8949) codec with no dependencies and no unsafe."
+license = "MIT OR Apache-2.0"
+categories = ["no-std", "encoding", "embedded"]
+keywords = ["cbor", "rfc8949", "no-std", "embedded", "serde-data-format"]
+
+[features]
+default = []
+# Floating-point support (f16/f32/f64 per RFC 8949 section 3.3).
+float = []
+# Enables `core::error::Error` impls and std-only conveniences.
+std = []
+# Indefinite-length items (RFC 8949 section 3.2): chunked strings,
+# open-ended arrays/maps with break terminators.
+indefinite = []
+# RawValue: zero-copy handle to any complete encoded item.
+raw = ["indefinite"]
+# Incremental decoding fed by arbitrary byte-slice chunks.
+stream = ["indefinite"]
+# Canonical map building with compile-time capacity (RFC 8949 section 4.2).
+canonical = []
+# Human-readable diagnostic output (RFC 8949 section 8 / Appendix A).
+diagnostic = []
+
+[dependencies]
+
+[dev-dependencies]
+# Intentionally none: tests use only core. Fuzz/bench tooling lives outside
+# the dependency graph (see fuzz/).
+[lints.rust]
+unsafe_code = "forbid"
+missing_docs = "warn"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+panic = { level = "allow", priority = 1 } # const helpers panic by design
+# Bit-level protocol code casts deliberately between fixed-width integers;
+# float equality is load-bearing (round-then-verify narrowing).
+cast_possible_truncation = "allow"
+cast_possible_wrap = "allow"
+cast_sign_loss = "allow"
+cast_precision_loss = "allow"
+inline_always = "allow"      # tiny const fns annotate deliberately
+missing_errors_doc = "allow" # error behavior documented per method group
+unreadable_literal = "allow" # hex masks read better without separators
+match_bool = "allow"
+single_match_else = "allow"
+float_cmp = "allow"          # exact-equality verification is intentional

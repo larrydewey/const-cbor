@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: "-D warnings"
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        features: ["", "--features float", "--features std", "--all-features"]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo test ${{ matrix.features }}
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo fmt --check
+      - run: cargo clippy --all-features --all-targets
+
+  no_std:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [thumbv7m-none-eabi, aarch64-unknown-none]
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo build --target ${{ matrix.target }} --all-features
+      - run: cargo build --target ${{ matrix.target }} --release
+
+  size:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build --release
+      - name: Report rlib size
+        run: |
+          SIZE=$(stat -c%s target/release/libconst_cbor.rlib)
+          echo "release rlib: $SIZE bytes"
+          test "$SIZE" -lt 400000

@@ -1,0 +1,3 @@
+# Keep defaults; enforce stability of formatting across contributors.
+edition = "2024"
+use_small_heuristics = "Max"
