@@ -7,10 +7,16 @@ name = "const-cbor"
 version = "0.3.0"
 
 [[package]]
+name = "const-cbor"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e0823dc3068395e00d7c6cb593815eae3ce03734495da89ca7a7ff9362401422"
+
+[[package]]
 name = "const-cbor-serde"
 version = "0.1.0"
 dependencies = [
- "const-cbor",
+ "const-cbor 0.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde",
  "serde_bytes",
 ]

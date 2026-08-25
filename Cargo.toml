@@ -7,6 +7,13 @@ description = "A const-first, no_std, allocation-free CBOR (RFC 8949) codec with
 license = "MIT OR Apache-2.0"
 categories = ["no-std", "encoding", "embedded"]
 keywords = ["cbor", "rfc8949", "no-std", "embedded", "serde-data-format"]
+repository = "https://github.com/larrydewey/const-cbor"
+homepage = "https://github.com/larrydewey/const-cbor"
+documentation = "https://docs.rs/const-cbor"
+
+[[bench]]
+name = "core_throughput"
+harness = false
 
 [workspace]
 members = ["serde"]

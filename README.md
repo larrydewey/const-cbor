@@ -47,6 +47,10 @@ where the linked `const_cbor` symbols can be inspected directly with
 | Binary size (Cortex-M) | ~1–4 KB | tens of KB |
 | API model | concrete-typed methods, chaining | trait impls + derive |
 
+Need serde? The [`const-cbor-serde`](serde/) companion crate adds
+`Serialize`/`Deserialize` adapters over this core — the core itself keeps
+zero dependencies.
+
 The design pushes work into the compiler: argument widths, head bytes,
 and encoded sizes are `const fn`s that LLVM folds for statically known
 inputs — entire items can be built *during* compilation:

@@ -5,8 +5,12 @@ edition = "2024"
 rust-version = "1.98"
 description = "Serde support for the const-cbor CBOR (RFC 8949) codec"
 license = "MIT OR Apache-2.0"
-categories = ["no-std", "encoding"]
-keywords = ["cbor", "serde", "rfc8949", "no-std"]
+categories = ["no-std", "encoding", "embedded"]
+keywords = ["cbor", "serde", "rfc8949", "no-std", "embedded"]
+repository = "https://github.com/larrydewey/const-cbor"
+homepage = "https://github.com/larrydewey/const-cbor"
+documentation = "https://docs.rs/const-cbor-serde"
+readme = "README.md"
 
 [features]
 default = []
@@ -14,7 +18,7 @@ default = []
 bignum = ["const-cbor/bignum"]
 
 [dependencies]
-const-cbor = { path = "..", features = ["indefinite", "float"] }
+const-cbor = { version = "0.3.0", features = ["indefinite", "float"] }
 serde = { version = "1", default-features = false, features = ["alloc"] }
 
 [dev-dependencies]
