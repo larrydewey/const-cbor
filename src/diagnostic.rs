@@ -385,10 +385,15 @@ fn render_simple(
         21 => out.put("true"),
         22 => out.put("null"),
         23 => out.put("undefined"),
-        24..=255 => {
-            // Unknown simples render as simple(n); values below 32 in this
-            // form are forbidden by section 3.3.
-            match crate::Simple(arg as u8).valid_two_byte() {
+        // All other simple values render as simple(n). Legality depends on
+        // the encoding width: the two-byte form (ai 24) is forbidden below
+        // 32 (RFC 8949 section 3.3); the one-byte form carries 0..=23.
+        _ => {
+            let legal = match ai {
+                24 => arg >= 32,
+                _ => arg < 24,
+            };
+            match legal {
                 true => {
                     out.put("simple(")?;
                     put_uint(out, arg)?;
@@ -397,7 +402,6 @@ fn render_simple(
                 false => Err(Error::INVALID_SIMPLE),
             }
         }
-        _ => Err(Error::TYPE_MISMATCH),
     }
 }
 

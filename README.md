@@ -12,22 +12,28 @@ CBOR directly between Rust values and byte buffers — no value tree, no
 heap, no `unsafe`, no traits, no dependencies.
 
 ```
-flash on Cortex-M3 (thumbv7m-none-eabi, opt-z, LTO), linked binary
-sections (.text + .rodata + unwind), inputs black_boxed so nothing is
-const-folded away:
+flash on Cortex-M3 (thumbv7m-none-eabi, `profile.size`: opt-level=z,
+fat LTO, panic=abort, symbols stripped), linked `.text` + `.rodata`,
+inputs black_boxed so nothing is const-folded away:
 
-  core only ................................ ~2.7 KB
-  + float (encode + decode exercised) ...... ~3.5 KB
-  + indefinite ............................. ~3.8 KB
-  + diagnostic ............................. ~7.0 KB
-  + diagnostic + float decimal text ........ ~20 KB
-  everything enabled and used .............. ~21.9 KB
+  core only ................................ 3,148 B
+  + float (encode + decode exercised) ...... 4,964 B
+  + indefinite ............................. 4,496 B
+  + bignum ................................. 3,994 B
+  + canonical .............................. 4,000 B
+  + deterministic (incl. indefinite) ....... 4,496 B
+  + diagnostic ............................. 7,462 B
+  + diagnostic + float decimal text ........ 21,578 B
+  everything enabled and used .............. 24,102 B
 
 Features you do not enable — or call — cost nothing.
 
-The same probe builds and **runs on x86_64** (`cargo run --release`),
+Reproduce with the checked-in probe:
+`cargo build --profile size --target thumbv7m-none-eabi --example cbor-size`
+then `size target/thumbv7m-none-eabi/size/examples/cbor-size`. The same
+probe builds and runs on x86_64 (`cargo run --profile size --example cbor-size`),
 where the linked `const_cbor` symbols can be inspected directly with
-`nm target/release/cbor-size | grep const_cbor`.
+`nm target/size/examples/cbor-size | grep const_cbor`.
 ```
 
 ## Why another CBOR crate?
@@ -121,6 +127,33 @@ const-cbor = { version = "0.2", features = ["float", "indefinite"] }
 | `stream` | `StreamDecoder`: incremental decode across arbitrary feed boundaries into one caller-provided scratch buffer | — |
 | `canonical` | `MapBuilder<N>`: deterministic map key ordering without allocation | §4.2 |
 | `diagnostic` | Human-readable rendering of CBOR into RFC 8949 §8 diagnostic notation | §8 |
+| `bignum` | Arbitrary-precision integers via tags 2/3, zero-copy magnitudes | §3.4.3 |
+| `deterministic` | Strict RFC §4.2 validation: minimal widths, shortest floats, sorted map keys | §4.2 |
+
+## Serde support
+
+The companion crate `serde/` (workspace member) adds `Serialize` /
+`Deserialize` adapters over the core codec:
+
+```toml
+[dependencies]
+const-cbor-serde = { path = "serde" }   # or from the registry
+```
+
+```rust
+use serde::{Deserialize, Serialize};
+
+#[derive(Serialize, Deserialize)]
+struct Point { x: i32, y: i32 }
+
+let bytes = const_cbor_serde::to_vec(&Point { x: 1, y: -2 })?;
+let p: Point = const_cbor_serde::from_slice(&bytes)?;
+```
+
+Representation follows ecosystem conventions (`serde_cbor` / `ciborium`):
+structs are CBOR maps keyed by field name, enums are externally tagged,
+sequences use indefinite lengths. The core crate itself remains
+dependency-free.
 | `std` | Host conveniences; the core never requires it | — |
 
 ### Feature examples

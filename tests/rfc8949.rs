@@ -267,11 +267,12 @@ fn typed_narrowing_rejects_overflow() {
 fn skip_traverses_nested_structures_iteratively() {
     let mut buf = [0u8; 256];
     let mut enc = Encoder::new(&mut buf);
-    enc.array_len(3).unwrap();
+    enc.array_len(2).unwrap();
     enc.str("skip me").unwrap();
     enc.map_len(1).unwrap();
     enc.array_len(2).unwrap();
-    enc.u8(1).unwrap().u8(2).unwrap().tag(9).unwrap().u8(7).unwrap();
+    enc.u8(1).unwrap().u8(2).unwrap(); // key: [1, 2]
+    enc.tag(9).unwrap().u8(7).unwrap(); // value: tag(9, 7)
     let (out, n) = enc.finish();
     let mut dec = Decoder::new(&out[..n]);
     dec.skip().unwrap();

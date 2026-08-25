@@ -13,18 +13,53 @@ jobs:
   test:
     strategy:
       matrix:
-        features: ["", "--features float", "--features std", "--all-features"]
+        include:
+          - crate: .
+            features: ""
+          - crate: .
+            features: "--features float"
+          - crate: .
+            features: "--features std"
+          - crate: .
+            features: "--features bignum"
+          - crate: .
+            features: "--features deterministic"
+          - crate: .
+            features: "--all-features"
+          - crate: serde
+            features: ""
+          - crate: serde
+            features: "--features bignum --all-features"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cargo test ${{ matrix.features }}
+      - run: cargo test ${{ matrix.features }} --manifest-path ${{ matrix.crate == 'serde' && 'serde/Cargo.toml' || 'Cargo.toml' }}
 
   lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - run: cargo fmt --check
-      - run: cargo clippy --all-features --all-targets
+      - run: cargo clippy --all-features --all-targets --manifest-path Cargo.toml -- -D warnings
+      - run: cargo clippy --all-features --all-targets --manifest-path serde/Cargo.toml -- -D warnings
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup component add llvm-tools-preview
+      - run: cargo install cargo-llvm-cov --locked
+      # Gate: line coverage must stay at or above 90%.
+      - run: cargo llvm-cov --all-features --fail-under-lines 90
+
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo install cargo-fuzz --locked
+      - run: cargo fuzz build
+      - run: cargo fuzz run decode -- -runs=100000
 
   no_std:
     runs-on: ubuntu-latest
@@ -41,9 +76,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - run: cargo build --release
-      - name: Report rlib size
+      - run: rustup target add thumbv7m-none-eabi
+      - name: Build Cortex-M3 size probe
+        run: cargo build --profile size --target thumbv7m-none-eabi --example cbor-size --all-features
+      - name: Gate linked size (.text + .rodata)
         run: |
-          SIZE=$(stat -c%s target/release/libconst_cbor.rlib)
-          echo "release rlib: $SIZE bytes"
-          test "$SIZE" -lt 400000
+          SIZE=$(size target/thumbv7m-none-eabi/size/examples/cbor-size | awk 'NR==2{print $1+$2}')
+          echo "probe .text+.rodata: $SIZE bytes"
+          test "$SIZE" -lt 26000

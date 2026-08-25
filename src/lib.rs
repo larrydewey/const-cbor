@@ -40,7 +40,8 @@
 //! null/undefined, and — behind the `float` feature — f16/f32/f64.
 //! Optional features add indefinite lengths (§3.2), raw zero-copy item
 //! handles, incremental decoding, canonical map ordering, diagnostic
-//! rendering, and floating-point numbers — see the README feature table.
+//! rendering, floating-point numbers, bignums (§3.4.3), and strict
+//! deterministic-encoding validation (§4.2) — see the README feature table.
 //! Without the `indefinite` feature the decoder rejects ai = 31 and the
 //! encoder never produces it.
 //!
@@ -114,6 +115,12 @@ pub mod stream;
 
 #[cfg(feature = "canonical")]
 pub mod canonical;
+
+#[cfg(feature = "bignum")]
+pub mod bignum;
+
+#[cfg(feature = "deterministic")]
+pub mod deterministic;
 
 #[cfg(feature = "diagnostic")]
 pub mod diagnostic;

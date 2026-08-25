@@ -1,12 +1,15 @@
 [package]
 name = "const-cbor"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 rust-version = "1.98"
 description = "A const-first, no_std, allocation-free CBOR (RFC 8949) codec with no dependencies and no unsafe."
 license = "MIT OR Apache-2.0"
 categories = ["no-std", "encoding", "embedded"]
 keywords = ["cbor", "rfc8949", "no-std", "embedded", "serde-data-format"]
+
+[workspace]
+members = ["serde"]
 
 [features]
 default = []
@@ -25,6 +28,12 @@ stream = ["indefinite"]
 canonical = []
 # Human-readable diagnostic output (RFC 8949 section 8 / Appendix A).
 diagnostic = []
+# Bignums: tags 2 and 3 per RFC 8949 section 3.4.3.
+bignum = []
+# Strict RFC 8949 section 4.2 deterministic-encoding validation.
+# Requires indefinite-length awareness so ai = 31 can be recognized
+# (and rejected) by the validator.
+deterministic = ["indefinite"]
 
 [dependencies]
 
@@ -32,7 +41,9 @@ diagnostic = []
 # Intentionally none: tests use only core. Fuzz/bench tooling lives outside
 # the dependency graph (see fuzz/).
 [lints.rust]
-unsafe_code = "forbid"
+# `deny` rather than `forbid` so the bare-metal size probe may use
+# `#[no_mangle]` for its C entry point; no unsafe code exists in src/.
+unsafe_code = "deny"
 missing_docs = "warn"
 
 [lints.clippy]
@@ -51,3 +62,12 @@ unreadable_literal = "allow" # hex masks read better without separators
 match_bool = "allow"
 single_match_else = "allow"
 float_cmp = "allow"          # exact-equality verification is intentional
+
+# Size-measurement profile used by the `cbor-size` probe example.
+[profile.size]
+inherits = "release"
+opt-level = "z"
+lto = "fat"
+codegen-units = 1
+panic = "abort"
+strip = true

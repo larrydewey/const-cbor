@@ -1,0 +1,28 @@
+[package]
+name = "const-cbor-serde"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.98"
+description = "Serde support for the const-cbor CBOR (RFC 8949) codec"
+license = "MIT OR Apache-2.0"
+categories = ["no-std", "encoding"]
+keywords = ["cbor", "serde", "rfc8949", "no-std"]
+
+[features]
+default = []
+# i128/u128 support routed through bignum tags 2/3.
+bignum = ["const-cbor/bignum"]
+
+[dependencies]
+const-cbor = { path = "..", features = ["indefinite", "float"] }
+serde = { version = "1", default-features = false, features = ["alloc"] }
+
+[dev-dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_bytes = "0.11"
+
+[lints.rust]
+unsafe_code = "forbid"
+
+[lints.clippy]
+all = { level = "deny", priority = -1 }

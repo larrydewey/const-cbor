@@ -40,6 +40,12 @@ pub enum Error {
     UNEXPECTED_BREAK = 9,
     /// Indefinite-length support is disabled (`indefinite` feature off).
     INDEFINITE_UNSUPPORTED = 10,
+    /// Item violates RFC 8949 section 4.2 preferred/deterministic
+    /// serialization: non-minimal argument width, non-shortest float,
+    /// indefinite length, unsorted or duplicate map keys, or a non-preferred
+    /// bignum. Produced only by [`crate::deterministic`] (`deterministic`
+    /// feature); ordinary decoding accepts all well-formed forms.
+    NOT_CANONICAL = 11,
 }
 
 impl Error {
@@ -59,6 +65,7 @@ impl Error {
             Self::DEPTH_EXCEEDED => "nesting depth exceeded",
             Self::UNEXPECTED_BREAK => "unexpected break",
             Self::INDEFINITE_UNSUPPORTED => "indefinite lengths unsupported",
+            Self::NOT_CANONICAL => "not canonical",
         }
     }
 

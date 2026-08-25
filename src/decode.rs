@@ -54,6 +54,56 @@ impl<'a> Decoder<'a> {
         self.input.get(self.pos).map(|&b| Major::from_initial(b))
     }
 
+    /// `true` when the next byte is the break marker terminating an
+    /// indefinite-length item (RFC 8949 §3.2); does not consume anything.
+    #[inline]
+    #[must_use]
+    pub fn peek_break(&self) -> bool {
+        matches!(self.input.get(self.pos), Some(&b) if crate::head::is_break(b))
+    }
+
+    /// Raw initial byte of the next item, if any input remains; does not
+    /// consume anything. Lets callers inspect the additional-information
+    /// field (`byte & 0x1f`) before committing to a typed getter.
+    #[inline]
+    #[must_use]
+    pub fn peek_head_byte(&self) -> Option<u8> {
+        self.input.get(self.pos).copied()
+    }
+
+    /// Consumes the header of an indefinite-length item of major type
+    /// `want` (RFC 8949 §3.2), i.e. an initial byte with additional
+    /// information 31.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::TYPE_MISMATCH`] unless the next item matches; structural
+    /// errors propagate.
+    #[cfg(any(feature = "indefinite", feature = "diagnostic"))]
+    pub fn expect_indef(&mut self, want: Major) -> Result<(), Error> {
+        let (major, _, indef) = self.next_head_ext()?;
+        match major == want && indef {
+            true => Ok(()),
+            false => Err(Error::TYPE_MISMATCH),
+        }
+    }
+
+    /// Consumes a break marker if present; reports whether one was there.
+    ///
+    /// # Errors
+    ///
+    /// [`Error::UNEXPECTED_BREAK`] is never produced here; the `Err` half
+    /// exists for API symmetry and currently cannot occur.
+    #[inline]
+    pub fn take_break(&mut self) -> Result<bool, Error> {
+        if self.peek_break() {
+            self.pos += 1;
+            Ok(true)
+        } else {
+            Ok(false)
+        }
+    }
+
     /// Reads and consumes the next head.
     #[inline]
     fn next_head(&mut self) -> Result<(Major, u64), Error> {
@@ -306,6 +356,16 @@ impl<'a> Decoder<'a> {
             self.input.get(self.pos),
             Some(b) if b >> 5 == 7 && (b & 0x1f) == 24
         );
+        // Floating-point widths (ai 25-27) carry IEEE 754 payloads, never
+        // simple values (RFC 8949 §3.3); the argument bits must not be
+        // reinterpreted as a simple value.
+        if matches!(
+            self.input.get(self.pos),
+            Some(b) if b >> 5 == 7 && matches!(b & 0x1f, 25..=27)
+        ) {
+            self.next_head()?;
+            return Err(Error::FLOAT_UNSUPPORTED);
+        }
         let (major, arg) = self.next_head()?;
         if major != Major::Simple {
             return Err(Error::TYPE_MISMATCH);
@@ -365,10 +425,17 @@ impl<'a> Decoder<'a> {
     /// [`Error::DEPTH_EXCEEDED`]).
     pub fn skip(&mut self) -> Result<(), Error> {
         // A virtual root count of 1 makes loop termination uniform. The
-        // sentinel `u64::MAX` marks an open-ended (indefinite) scope that
-        // closes on a break byte instead of a counter reaching zero.
-        const OPEN: u64 = u64::MAX;
-        let mut stack = [0u64; SKIP_LIMIT];
+        // sentinel marks an open-ended (indefinite) scope that closes on a
+        // break byte instead of a counter reaching zero.
+        //
+        // Counters are u32: a container declaring more than `u32::MAX`
+        // items hits `TRUNCATED` long before the counter could matter
+        // (each item occupies at least one byte), so narrowing the counter
+        // cannot change any outcome — and halves the stack's zeroing cost.
+        type Count = u32;
+        const OPEN: Count = Count::MAX;
+        const CLAMP: u64 = (Count::MAX - 1) as u64;
+        let mut stack = [0u32; SKIP_LIMIT];
         stack[0] = 1;
         let mut sp = 1usize;
         loop {
@@ -407,10 +474,12 @@ impl<'a> Decoder<'a> {
                         }
                     }
                     match major {
-                        // Tags wrap one more item: leave the counter
-                        // untouched so the tagged item is consumed
-                        // before decrementing.
-                        Major::Tag | Major::Unsigned | Major::Negative | Major::Simple => {}
+                        // A tag wraps exactly one more item (RFC 8949
+                        // section 3.4): defer the counter decrement by
+                        // looping straight to the next item, so the
+                        // tagged payload is consumed as part of this one.
+                        Major::Tag => continue,
+                        Major::Unsigned | Major::Negative | Major::Simple => {}
                         Major::Bytes | Major::Text => {
                             let len = self.content_len(arg)?;
                             self.pos += len;
@@ -420,8 +489,10 @@ impl<'a> Decoder<'a> {
                                 Major::Map => arg.saturating_mul(2),
                                 _ => arg,
                             };
+                            // Clamp before narrowing: see the u32 note on
+                            // the stack declaration above.
                             if items > 0 {
-                                sp = Self::push(&mut stack, sp, items)?;
+                                sp = Self::push(&mut stack, sp, items.min(CLAMP) as Count)?;
                                 continue;
                             }
                         }
@@ -467,7 +538,7 @@ impl<'a> Decoder<'a> {
 
     #[cold]
     #[inline(never)]
-    fn push(stack: &mut [u64; SKIP_LIMIT], sp: usize, count: u64) -> Result<usize, Error> {
+    fn push(stack: &mut [u32; SKIP_LIMIT], sp: usize, count: u32) -> Result<usize, Error> {
         match sp < SKIP_LIMIT {
             true => {
                 stack[sp] = count;
